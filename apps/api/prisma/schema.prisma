@@ -1,6 +1,5 @@
-// Los modelos llegan con cada funcionalidad (primero feature/auth: users).
-// Las restricciones que Prisma no expresa (índices únicos parciales, CHECK)
-// van como SQL dentro de la migración correspondiente. Ver docs/modelo-datos.md.
+// Las restricciones que Prisma no expresa (CHECK, índices parciales) van como SQL
+// dentro de la migración correspondiente. Ver docs/modelo-datos.md.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +9,42 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  REFEREE
+  DESIGNATOR
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role
+  fullName     String   @map("full_name")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  refreshTokens RefreshToken[]
+
+  @@index([role, isActive])
+  @@map("users")
+}
+
+// Refresh tokens opacos: solo se guarda el hash SHA-256. Se rotan en cada uso y
+// reutilizar uno ya rotado revoca todas las sesiones del usuario.
+model RefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("refresh_tokens")
 }
