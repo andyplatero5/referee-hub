@@ -1,0 +1,19 @@
+{
+  "name": "@referee-hub/tests",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test:staging": "playwright test --project=staging",
+    "test:smoke": "playwright test --project=smoke-prod",
+    "test:ui": "playwright test --project=staging --ui",
+    "report": "playwright show-report",
+    "install:browsers": "playwright install chromium",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.6",
+    "dotenv": "^18.0.9",
+    "typescript": "^5.9.3"
+  }
+}
