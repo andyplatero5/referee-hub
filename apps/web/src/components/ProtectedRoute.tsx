@@ -1,7 +1,23 @@
 import { Navigate, Outlet } from 'react-router';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth, type Role } from '../auth/AuthContext';
+import { ForbiddenPage } from '../pages/ForbiddenPage';
 
-export function ProtectedRoute() {
-  const { user } = useAuth();
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+interface ProtectedRouteProps {
+  /** Si se indica, solo esos roles ven la ruta; el resto ve "acceso denegado". */
+  roles?: Role[];
+}
+
+export function ProtectedRoute({ roles }: ProtectedRouteProps) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <p role="status" className="p-8 text-center" data-testid="session-loading">
+        Cargando…
+      </p>
+    );
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (roles && !roles.includes(user.role)) return <ForbiddenPage />;
+  return <Outlet />;
 }

@@ -4,13 +4,20 @@ import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 export function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, loading, login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  if (loading) {
+    return (
+      <p role="status" className="p-8 text-center" data-testid="session-loading">
+        Cargando…
+      </p>
+    );
+  }
   if (user) return <Navigate to="/" replace />;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

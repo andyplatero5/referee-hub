@@ -1,12 +1,18 @@
-import { useNavigate } from 'react-router';
-import { useAuth } from '../auth/AuthContext';
+import { Link, useNavigate } from 'react-router';
+import { useAuth, type Role } from '../auth/AuthContext';
+
+export const ROLE_LABELS: Record<Role, string> = {
+  REFEREE: 'Árbitro',
+  DESIGNATOR: 'Designador',
+  ADMIN: 'Administrador',
+};
 
 export function HomePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   async function handleLogout() {
-    logout();
+    await logout();
     await navigate('/login', { replace: true });
   }
 
@@ -24,8 +30,19 @@ export function HomePage() {
         </button>
       </header>
       <p data-testid="welcome-message">
-        Hola, {user?.fullName} ({user?.role})
+        Hola, {user?.fullName} ({user ? ROLE_LABELS[user.role] : ''})
       </p>
+      <nav aria-label="Principal" className="mt-6">
+        <ul className="space-y-2">
+          {user?.role === 'ADMIN' && (
+            <li>
+              <Link to="/admin/users" data-testid="nav-users" className="text-green-700 underline">
+                Usuarios
+              </Link>
+            </li>
+          )}
+        </ul>
+      </nav>
     </main>
   );
 }
