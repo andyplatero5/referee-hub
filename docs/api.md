@@ -85,6 +85,23 @@ Base: `/api/v1` · Swagger UI: `/api/docs` · JSON: `/api/docs-json` · Salud: `
 ```
 Mensaje genérico en 401 (no distingue "usuario no existe" de "contraseña mala"). Límite: 5 intentos por minuto por IP+correo; el sexto recibe 429 con `Retry-After`.
 
+**Sesión:**
+- El access token (JWT, 15 min) va en la respuesta y se envía como `Authorization: Bearer`. El servidor lo valida y además lee el usuario de la BD en cada petición, así que desactivar a alguien o cambiarle el rol tiene efecto inmediato.
+- El refresh token es opaco, viaja solo en la cookie `refresh_token` (`HttpOnly`, `SameSite=Strict`, `Secure` en producción, `Path=/api/v1/auth`) y **se rota** en cada `/auth/refresh`.
+- Reutilizar un refresh token ya rotado devuelve 401 y cierra todas las sesiones del usuario.
+- Como la cookie es `SameSite=Strict`, en producción la web y la API deben compartir origen (rewrite `/api/*` de Vercel hacia Render).
+- Correo y contraseña inválidos, o usuario desactivado, dan el mismo 401 `AUTH_INVALID_CREDENTIALS`.
+
+| Código | HTTP | Cuándo |
+|---|---|---|
+| `VALIDATION_ERROR` | 400 | Cuerpo, query o parámetros inválidos (`details` lista campo y motivo) |
+| `AUTH_INVALID_CREDENTIALS` | 401 | Login fallido |
+| `AUTH_TOKEN_MISSING` | 401 | Ruta protegida sin `Authorization` |
+| `AUTH_TOKEN_INVALID` | 401 | Token manipulado, vencido o de un usuario desactivado |
+| `AUTH_SESSION_INVALID` | 401 | Refresh sin cookie, expirado, revocado o reutilizado |
+| `FORBIDDEN` | 403 | El rol no permite la ruta |
+| `TOO_MANY_REQUESTS` | 429 | Límite de peticiones |
+
 ## Users — `/users` (solo ADMIN)
 
 | Método | Ruta | Descripción | Códigos |
@@ -93,6 +110,8 @@ Mensaje genérico en 401 (no distingue "usuario no existe" de "contraseña mala"
 | POST | `/users` | Crea usuario | 201, 400, 403, 409 (email duplicado) |
 | GET | `/users/:id` | Detalle | 200, 404 |
 | PATCH | `/users/:id` | Edita rol, nombre, `isActive`. No permite dejar el sistema sin administrador activo (`LAST_ADMIN`) | 200, 400, 404, 409 |
+
+Códigos propios de usuarios: `USER_NOT_FOUND` (404), `USER_EMAIL_TAKEN` (409) y `LAST_ADMIN` (409: no se puede desactivar ni quitar el rol al último administrador activo). Al desactivar a un usuario se revocan sus sesiones.
 
 ## Referees — `/referees`
 

@@ -36,7 +36,7 @@ pnpm typecheck               # tsc --noEmit en todos los paquetes
 pnpm db:generate             # prisma generate
 pnpm db:migrate              # prisma migrate dev (crea y aplica una migración en dev)
 pnpm db:deploy               # prisma migrate deploy (staging y producción)
-pnpm db:seed                 # seed reproducible
+pnpm db:seed                 # usuarios de ejemplo (admin@, designador1@, arbitro1@… @referee-hub.test), contraseña = SEED_PASSWORD
 
 pnpm test:staging            # Playwright, proyecto `staging` (regresión completa)
 pnpm test:smoke              # Playwright, proyecto `smoke-prod` (solo @smoke, solo lectura)
@@ -55,9 +55,9 @@ Los hooks de Husky necesitan `pnpm` en el PATH.
 
 Cada app tiene su `.env.example` versionado. Copia a `.env` (ignorado por git). **Nunca** subas secretos.
 
-- `apps/api/.env`: `DATABASE_URL`, `DIRECT_URL`, `CORS_ORIGINS`, `PORT`, `LOG_LEVEL`.
+- `apps/api/.env`: `DATABASE_URL`, `DIRECT_URL`, `JWT_ACCESS_SECRET` (mín. 32 caracteres), `SEED_PASSWORD`, `CORS_ORIGINS`, `PORT`, `LOG_LEVEL`.
 - `apps/web/.env`: `VITE_API_URL` (vacío en local), `API_PROXY_TARGET`.
-- `tests/.env`: `BASE_URL`, `API_URL`.
+- `tests/.env`: `BASE_URL`, `API_URL`, `SEED_PASSWORD`.
 
 La base de datos de desarrollo es una **rama de Neon** (no se usa Docker). Neon da dos cadenas: la de pooler va en `DATABASE_URL` y la directa en `DIRECT_URL` (migraciones).
 
