@@ -1,0 +1,13 @@
+// Los modelos llegan con cada funcionalidad (primero feature/auth: users).
+// Las restricciones que Prisma no expresa (índices únicos parciales, CHECK)
+// van como SQL dentro de la migración correspondiente. Ver docs/modelo-datos.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
