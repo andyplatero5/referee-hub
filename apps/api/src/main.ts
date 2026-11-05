@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -13,6 +14,7 @@ async function bootstrap(): Promise<void> {
   // Render queda detrás de un proxy: así el rate limit ve la IP real del cliente.
   app.set('trust proxy', 1);
   app.use(helmet());
+  app.use(cookieParser());
   app.enableCors({
     origin: env.CORS_ORIGINS,
     credentials: true,

@@ -2,12 +2,14 @@ import { Controller, Get, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { Public } from '../../common/auth/decorators';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { env } from '../../config';
 
 const DB_TIMEOUT_MS = 3000;
 
 @ApiTags('health')
+@Public()
 @SkipThrottle()
 @Controller('health')
 export class HealthController {
