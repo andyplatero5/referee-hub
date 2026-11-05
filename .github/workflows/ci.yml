@@ -53,6 +53,8 @@ jobs:
       DATABASE_URL: postgresql://referee:referee@localhost:5432/referee_hub
       DIRECT_URL: postgresql://referee:referee@localhost:5432/referee_hub
       CORS_ORIGINS: http://localhost:5173
+      JWT_ACCESS_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      SEED_PASSWORD: ci-only-seed-password
       BASE_URL: http://localhost:5173
       API_URL: http://localhost:3000
       START_SERVERS: '1'
@@ -64,6 +66,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:deploy
+      - run: pnpm db:seed
       - run: pnpm build
       - run: pnpm --filter @referee-hub/tests exec playwright install --with-deps chromium
       - run: pnpm test:staging
