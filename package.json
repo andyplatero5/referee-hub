@@ -1,0 +1,41 @@
+{
+  "name": "referee-hub",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Plataforma de gestión y designación de árbitros de fútbol",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @referee-hub/api dev",
+    "dev:web": "pnpm --filter @referee-hub/web dev",
+    "build": "pnpm -r build",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @referee-hub/api prisma:generate",
+    "db:migrate": "pnpm --filter @referee-hub/api prisma:migrate",
+    "db:deploy": "pnpm --filter @referee-hub/api prisma:deploy",
+    "db:seed": "pnpm --filter @referee-hub/api prisma:seed",
+    "test:staging": "pnpm --filter @referee-hub/tests test:staging",
+    "test:smoke": "pnpm --filter @referee-hub/tests test:smoke",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}
