@@ -9,7 +9,10 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { SecurityModule } from './common/security/security.module';
 import { env } from './config';
 import { AuthModule } from './modules/auth/auth.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 import { HealthModule } from './modules/health/health.module';
+import { RefereesModule } from './modules/referees/referees.module';
+import { TeamsModule } from './modules/teams/teams.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -37,6 +40,9 @@ import { UsersModule } from './modules/users/users.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    CategoriesModule,
+    TeamsModule,
+    RefereesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
