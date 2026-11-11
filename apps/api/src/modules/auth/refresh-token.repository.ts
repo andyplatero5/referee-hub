@@ -20,9 +20,10 @@ export class RefreshTokenRepository {
    */
   rotate(current: RefreshToken, nextHash: string, nextExpiresAt: Date): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
+      const now = new Date();
       const revoked = await tx.refreshToken.updateMany({
         where: { id: current.id, revokedAt: null },
-        data: { revokedAt: new Date() },
+        data: { revokedAt: now, rotatedAt: now },
       });
       if (revoked.count !== 1) return false;
       await tx.refreshToken.create({
