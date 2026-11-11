@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
 
@@ -47,6 +48,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if (Array.isArray(bodyMessage)) details = bodyMessage;
         if (bodyDetails !== undefined) details = bodyDetails;
       }
+    } else if (
+      exception instanceof Prisma.PrismaClientKnownRequestError &&
+      exception.code === 'P2002'
+    ) {
+      // Violación de UNIQUE que ganó la carrera frente a la comprobación previa del servicio.
+      status = HttpStatus.CONFLICT;
+      code = 'CONFLICT';
+      message = 'El recurso ya existe.';
     } else {
       this.logger.error(exception, 'Excepción no controlada');
     }

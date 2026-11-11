@@ -1,5 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { apiPost } from '../api/client';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { apiGet, apiPost, refreshSession, setAccessToken } from '../api/client';
 
 export type Role = 'REFEREE' | 'DESIGNATOR' | 'ADMIN';
 
@@ -17,25 +25,50 @@ interface LoginResponse {
 
 interface AuthContextValue {
   user: AuthUser | null;
+  /** true mientras se intenta restaurar la sesión al abrir la app. */
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// El access token vive solo en memoria (nunca en localStorage). El refresh por cookie
-// httpOnly y la restauración de sesión llegan con feature/auth.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Restaura la sesión con la cookie de refresh, si la hay.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const restored = await refreshSession();
+      const current = restored ? await apiGet<AuthUser>('/auth/me').catch(() => null) : null;
+      if (!cancelled) {
+        setUser(current);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await apiPost<LoginResponse>('/auth/login', { email, password });
+    const result = await apiPost<LoginResponse>('/auth/login', { email, password }, false);
+    setAccessToken(result.accessToken);
     setUser(result.user);
   }, []);
 
-  const logout = useCallback(() => setUser(null), []);
+  const logout = useCallback(async () => {
+    try {
+      await apiPost('/auth/logout', undefined, false);
+    } finally {
+      setAccessToken(null);
+      setUser(null);
+    }
+  }, []);
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
+  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

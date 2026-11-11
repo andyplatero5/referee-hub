@@ -2,13 +2,14 @@
 
 PostgreSQL + Prisma. Todas las fechas/horas son `timestamptz` guardadas en **UTC**. `availability.date` y `referees.license_expires_on` son `date` (sin hora). IDs: `uuid` generados por la BD.
 
-> Estado: **borrador v0.2**. Además de las 11 tablas pedidas agrego 3 que las reglas necesitan: `categories`, `referee_conflicts` (R4) y `audit_log` (auditoría de informes/evaluaciones).
+> Estado: **borrador v0.2**. Además de las 11 tablas pedidas agrego 4 que las reglas y la seguridad necesitan: `categories`, `referee_conflicts` (R4), `audit_log` (auditoría de informes/evaluaciones) y `refresh_tokens` (sesiones).
 
 ## Diagrama ER
 
 ```mermaid
 erDiagram
     users ||--o| referees : "perfil (1:0..1)"
+    users ||--o{ refresh_tokens : "sesiones"
     categories ||--o{ referees : "categoría"
     categories ||--o{ matches : "categoría requerida"
     referees ||--o{ availability : declara
@@ -38,6 +39,14 @@ erDiagram
         boolean is_active
         timestamptz created_at
         timestamptz updated_at
+    }
+    refresh_tokens {
+        uuid id PK
+        uuid user_id FK
+        text token_hash UK "SHA-256, nunca el token"
+        timestamptz expires_at
+        timestamptz revoked_at
+        timestamptz created_at
     }
     categories {
         smallint id PK
@@ -167,12 +176,26 @@ erDiagram
 | Columna | Tipo | Restricciones |
 |---|---|---|
 | id | uuid | PK |
-| email | text | NOT NULL, UNIQUE (guardado en minúsculas) |
+| email | text | NOT NULL, UNIQUE, CHECK (email = lower(email)) |
 | password_hash | text | NOT NULL (argon2id) |
 | role | enum | NOT NULL |
-| full_name | text | NOT NULL |
+| full_name | text | NOT NULL, CHECK (length(trim(full_name)) > 0) |
 | is_active | boolean | NOT NULL, default true |
 | created_at / updated_at | timestamptz | NOT NULL |
+
+Índice: `(role, is_active)`. La regla "siempre queda al menos un administrador activo" (`LAST_ADMIN`) vive en el servicio y se evalúa en una transacción serializable.
+
+### refresh_tokens
+| Columna | Tipo | Restricciones |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | NOT NULL, FK → users ON DELETE CASCADE |
+| token_hash | text | NOT NULL, UNIQUE (SHA-256 del token; el token en claro solo existe en la cookie) |
+| expires_at | timestamptz | NOT NULL, CHECK (expires_at > created_at) |
+| revoked_at | timestamptz | NULL; con valor, el token ya no sirve |
+| created_at | timestamptz | NOT NULL |
+
+Índice: `(user_id, revoked_at)`. Los tokens se **rotan** en cada uso: el anterior queda revocado y se emite uno nuevo. Si se presenta un token ya revocado se asume robo y se revocan todas las sesiones del usuario. Al desactivar a un usuario también se revocan.
 
 ### categories
 | Columna | Tipo | Restricciones |
