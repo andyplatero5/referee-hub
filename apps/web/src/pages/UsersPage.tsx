@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { ApiError, apiGet, apiPatch, apiPost } from '../api/client';
+import { apiGet, apiPatch, apiPost, errorMessage as errorText } from '../api/client';
 import type { Role } from '../auth/AuthContext';
 import { ROLE_LABELS } from './HomePage';
 
@@ -18,10 +18,6 @@ interface UsersResponse {
 }
 
 const ROLES: Role[] = ['REFEREE', 'DESIGNATOR', 'ADMIN'];
-
-// Los mensajes vienen del servidor (código de error), el frontend no repite reglas de negocio.
-const errorText = (error: unknown) =>
-  error instanceof ApiError ? error.message : 'No se pudo completar la acción.';
 
 export function UsersPage() {
   const [users, setUsers] = useState<ManagedUser[]>([]);

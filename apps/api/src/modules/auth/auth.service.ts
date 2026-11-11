@@ -21,6 +21,12 @@ export interface SessionTokens {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Ventana en la que un refresh token recién rotado todavía se tolera (ver AuthService.refresh). */
+export const REFRESH_REUSE_GRACE_MS = 10_000;
+
+const isRecentRotation = (token: { rotatedAt: Date | null }): boolean =>
+  token.rotatedAt !== null && Date.now() - token.rotatedAt.getTime() <= REFRESH_REUSE_GRACE_MS;
+
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 const toAuthUser = (user: User): AuthUser => ({
   id: user.id,
@@ -59,7 +65,9 @@ export class AuthService {
     if (!stored) throw invalidSession();
 
     // Reutilizar un token ya rotado indica que pudo ser robado: se cierran todas las sesiones.
-    if (stored.revokedAt) {
+    // Excepción: si se rotó hace unos segundos es casi seguro una carrera legítima (recarga
+    // rápida, dos pestañas, una navegación que cortó la respuesta y perdió la cookie nueva).
+    if (stored.revokedAt && !isRecentRotation(stored)) {
       await this.refreshTokens.revokeAllForUser(stored.userId);
       throw invalidSession();
     }
@@ -69,11 +77,21 @@ export class AuthService {
     if (!user || !user.isActive) throw invalidSession();
 
     const next = this.newRefreshToken();
-    const rotated = await this.refreshTokens.rotate(stored, next.hash, next.expiresAt);
-    if (!rotated) {
-      await this.refreshTokens.revokeAllForUser(stored.userId);
-      throw invalidSession();
+    let rotated = false;
+    if (!stored.revokedAt) {
+      rotated = await this.refreshTokens.rotate(stored, next.hash, next.expiresAt);
+      if (!rotated) {
+        // Otra petición lo rotó entre la lectura y la escritura: se revisa por qué quedó revocado.
+        const current = await this.refreshTokens.findByHash(hashToken(rawToken));
+        if (!current || !isRecentRotation(current)) {
+          await this.refreshTokens.revokeAllForUser(stored.userId);
+          throw invalidSession();
+        }
+      }
     }
+    // Carrera benigna: se entrega un token nuevo sin cerrar las demás sesiones.
+    if (!rotated) await this.refreshTokens.create(user.id, next.hash, next.expiresAt);
+
     return {
       accessToken: await this.signAccessToken(user),
       refreshToken: next.raw,

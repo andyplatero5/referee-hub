@@ -60,6 +60,7 @@ Como árbitro quiero declarar equipos con los que tengo conflicto para no ser de
 
 - **Dado** un equipo existente, **cuando** declaro conflicto con motivo, **entonces** el sistema me bloquea para sus partidos (R4).
 - **Dado** que ya declaré ese equipo, **cuando** lo declaro de nuevo, **entonces** recibo un error de duplicado.
+- **Dado** un conflicto ya declarado, **cuando** intento retirarlo, **entonces** recibo 403: solo el administrador puede retirarlo.
 
 ### HU-013 · Ver mis designaciones *(assignments)*
 Como árbitro quiero ver mis designaciones para saber dónde y cuándo debo presentarme.
@@ -207,6 +208,12 @@ Como administrador quiero reabrir un informe enviado para corregir errores justi
 - **Dado** que soy designador, **cuando** intento reabrir, **entonces** recibo 403.
 - **Dado** un reabierto sin motivo, **cuando** envío, **entonces** recibo 422.
 - **Dado** un informe reabierto, **cuando** el central lo corrige y reenvía, **entonces** vuelve a bloquearse.
+
+### HU-037 · Retirar conflictos de interés (R4)
+Como administrador quiero retirar un conflicto de interés declarado por un árbitro cuando ya no aplique, para que pueda volver a ser designado.
+
+- **Dado** un conflicto declarado, **cuando** lo retiro, **entonces** desaparece y el árbitro vuelve a poder ser designado en partidos de ese equipo.
+- **Dado** un conflicto que no pertenece a ese árbitro, **cuando** intento retirarlo, **entonces** recibo 404.
 
 ### HU-034 · Consultar la auditoría
 Como administrador quiero ver el historial de cambios de informes y evaluaciones para rendir cuentas.

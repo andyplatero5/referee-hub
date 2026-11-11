@@ -7,9 +7,27 @@ export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: 'Administrador',
 };
 
+interface NavLink {
+  to: string;
+  label: string;
+  testId: string;
+}
+
+// Qué enlaces ve cada rol. Es solo navegación: el servidor es quien autoriza cada petición.
+const NAV_LINKS: Record<Role, NavLink[]> = {
+  ADMIN: [
+    { to: '/admin/users', label: 'Usuarios', testId: 'nav-users' },
+    { to: '/referees', label: 'Árbitros', testId: 'nav-referees' },
+    { to: '/admin/teams', label: 'Equipos', testId: 'nav-teams' },
+  ],
+  DESIGNATOR: [{ to: '/referees', label: 'Árbitros', testId: 'nav-referees' }],
+  REFEREE: [{ to: '/profile', label: 'Mi perfil', testId: 'nav-profile' }],
+};
+
 export function HomePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const links = user ? NAV_LINKS[user.role] : [];
 
   async function handleLogout() {
     await logout();
@@ -34,13 +52,13 @@ export function HomePage() {
       </p>
       <nav aria-label="Principal" className="mt-6">
         <ul className="space-y-2">
-          {user?.role === 'ADMIN' && (
-            <li>
-              <Link to="/admin/users" data-testid="nav-users" className="text-green-700 underline">
-                Usuarios
+          {links.map((link) => (
+            <li key={link.to}>
+              <Link to={link.to} data-testid={link.testId} className="text-green-700 underline">
+                {link.label}
               </Link>
             </li>
-          )}
+          ))}
         </ul>
       </nav>
     </main>

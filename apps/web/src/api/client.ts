@@ -90,8 +90,13 @@ export async function apiRequest<TResponse>(
   return (await response.json()) as TResponse;
 }
 
+// Los mensajes de error vienen del servidor; el frontend no repite reglas de negocio.
+export const errorMessage = (error: unknown): string =>
+  error instanceof ApiError ? error.message : 'No se pudo completar la acción.';
+
 export const apiGet = <T>(path: string) => apiRequest<T>(path);
 export const apiPost = <T>(path: string, body?: unknown, auth = true) =>
   apiRequest<T>(path, { method: 'POST', body, auth });
 export const apiPatch = <T>(path: string, body: unknown) =>
   apiRequest<T>(path, { method: 'PATCH', body });
+export const apiDelete = (path: string) => apiRequest<void>(path, { method: 'DELETE' });
