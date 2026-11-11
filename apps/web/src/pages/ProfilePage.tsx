@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { ApiError, apiDelete, apiPatch, apiPost, errorMessage } from '../api/client';
+import { ApiError, apiPatch, apiPost, errorMessage } from '../api/client';
 import type { Paged, Referee, RefereeConflict, Team } from '../api/types';
 import { useApiData } from '../api/useApiData';
 
@@ -92,23 +92,14 @@ function ConflictsSection({ referee, teams }: { referee: Referee; teams: Team[] 
     }
   }
 
-  async function handleRemove(conflictId: string) {
-    setError(null);
-    try {
-      await apiDelete(`/referees/${referee.id}/conflicts/${conflictId}`);
-      conflicts.reload();
-    } catch (caught) {
-      setError(errorMessage(caught));
-    }
-  }
-
   return (
     <section aria-labelledby="conflicts-title" className="mt-8">
       <h2 id="conflicts-title" className="mb-2 text-lg font-semibold">
         Conflictos de interés
       </h2>
       <p className="mb-3 text-sm text-gray-700">
-        No podrás ser designado en partidos de los equipos que declares aquí.
+        No podrás ser designado en partidos de los equipos que declares aquí. Para retirar un
+        conflicto, pídeselo al administrador.
       </p>
 
       {conflicts.data?.data.length === 0 && (
@@ -122,20 +113,10 @@ function ConflictsSection({ referee, teams }: { referee: Referee; teams: Team[] 
             <li
               key={item.id}
               data-testid={`conflict-${item.team.name}`}
-              className="flex items-start justify-between gap-4 rounded border border-gray-200 p-3"
+              className="rounded border border-gray-200 p-3"
             >
-              <span>
-                <strong>{item.team.name}</strong>
-                <span className="block text-sm text-gray-700">{item.reason}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => handleRemove(item.id)}
-                data-testid={`conflict-remove-${item.team.name}`}
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
-              >
-                Retirar
-              </button>
+              <strong>{item.team.name}</strong>
+              <span className="block text-sm text-gray-700">{item.reason}</span>
             </li>
           ))}
         </ul>

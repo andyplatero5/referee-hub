@@ -124,7 +124,7 @@ Códigos propios de usuarios: `USER_NOT_FOUND` (404), `USER_EMAIL_TAKEN` (409) y
 | PATCH | `/referees/:id` | Edita (A todo; R solo `phone`, el resto da 403; D no edita) | 200, 400, 403, 404, 409 |
 | GET | `/referees/:id/conflicts` | Conflictos de interés (A, D; R solo los suyos) | 200, 404 |
 | POST | `/referees/:id/conflicts` | Declara conflicto `{ teamId, reason }` (A, o R sobre sí mismo; `reason` ≥ 10 caracteres) | 201, 400, 403, 404, 409 |
-| DELETE | `/referees/:id/conflicts/:conflictId` | Retira conflicto (A, o R los suyos) ⚠️ | 204, 403, 404 |
+| DELETE | `/referees/:id/conflicts/:conflictId` | Retira conflicto (solo A: el árbitro declara, pero no puede retirar, para que no esquive partidos) | 204, 403, 404 |
 
 La respuesta de un árbitro incluye `category { id, name, level }`, `licenseExpiresOn` (`YYYY-MM-DD`), `licenseStatus` (`VALID`, `EXPIRING` si vence en menos de 30 días, `EXPIRED`) y `licenseDaysRemaining`. Vence el día indicado: ese mismo día aún es `EXPIRING`, no `EXPIRED`. Las fechas se comparan en UTC por ahora; la regla R3 usará la zona horaria de la sede.
 

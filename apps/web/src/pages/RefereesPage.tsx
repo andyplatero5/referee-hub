@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { apiPatch, apiPost, errorMessage } from '../api/client';
-import type { Category, LicenseStatus, Paged, Referee } from '../api/types';
+import { apiDelete, apiPatch, apiPost, errorMessage } from '../api/client';
+import type { Category, LicenseStatus, Paged, Referee, RefereeConflict } from '../api/types';
 import { useApiData } from '../api/useApiData';
 import { useAuth, type Role } from '../auth/AuthContext';
 
@@ -149,6 +149,64 @@ function CreateRefereeForm({
         Crear perfil
       </button>
     </form>
+  );
+}
+
+function ConflictsAdmin({ referee }: { referee: Referee }) {
+  const conflicts = useApiData<{ data: RefereeConflict[] }>(`/referees/${referee.id}/conflicts`);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleRemove(conflictId: string) {
+    setError(null);
+    try {
+      await apiDelete(`/referees/${referee.id}/conflicts/${conflictId}`);
+      conflicts.reload();
+    } catch (caught) {
+      setError(errorMessage(caught));
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="admin-conflicts-title"
+      className="mb-8 max-w-sm rounded border border-gray-200 p-4"
+    >
+      <h2 id="admin-conflicts-title" className="mb-2 font-semibold">
+        Conflictos de interés de {referee.fullName}
+      </h2>
+      {conflicts.data?.data.length === 0 && (
+        <p data-testid="admin-conflicts-empty" className="text-sm">
+          No tiene conflictos declarados.
+        </p>
+      )}
+      <ul className="space-y-2" data-testid="admin-conflicts-list">
+        {conflicts.data?.data.map((item) => (
+          <li
+            key={item.id}
+            data-testid={`admin-conflict-${item.team.name}`}
+            className="flex items-start justify-between gap-4"
+          >
+            <span>
+              <strong>{item.team.name}</strong>
+              <span className="block text-sm text-gray-700">{item.reason}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => handleRemove(item.id)}
+              data-testid={`admin-conflict-remove-${item.team.name}`}
+              className="rounded border border-gray-300 px-2 py-1 text-sm"
+            >
+              Retirar
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && (
+        <p role="alert" data-testid="admin-conflicts-error" className="mt-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -418,6 +476,7 @@ export function RefereesPage() {
           onCancel={() => setEditing(null)}
         />
       )}
+      {isAdmin && editing && <ConflictsAdmin key={`conflicts-${editing.id}`} referee={editing} />}
 
       {isAdmin && (
         <section aria-labelledby="new-referee-title">

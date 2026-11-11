@@ -85,9 +85,9 @@ export class RefereesController {
   }
 
   @Delete(':id/conflicts/:conflictId')
-  @Roles('ADMIN', 'REFEREE')
+  @Roles('ADMIN')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Retira un conflicto de interés' })
+  @ApiOperation({ summary: 'Retira un conflicto de interés (solo administrador)' })
   removeConflict(
     @Param('id', idPipe) id: string,
     @Param('conflictId', idPipe) conflictId: string,
