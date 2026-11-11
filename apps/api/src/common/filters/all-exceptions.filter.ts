@@ -13,6 +13,13 @@ const DEFAULT_CODES: Record<number, string> = {
   [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
 };
 
+// Postgres responde 23001 (restrict_violation) a un ON DELETE RESTRICT, y Prisma no lo traduce
+// al código P2003 de las demás violaciones de clave foránea: se reconoce también por mensaje.
+const isForeignKeyViolation = (exception: unknown): boolean =>
+  (exception instanceof Prisma.PrismaClientKnownRequestError && exception.code === 'P2003') ||
+  (exception instanceof Prisma.PrismaClientUnknownRequestError &&
+    exception.message.includes('violates RESTRICT setting of foreign key constraint'));
+
 interface ErrorBody {
   code?: unknown;
   message?: unknown;
@@ -56,6 +63,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.CONFLICT;
       code = 'CONFLICT';
       message = 'El recurso ya existe.';
+    } else if (isForeignKeyViolation(exception)) {
+      // Clave foránea: el registro que se intenta borrar está referenciado por otros.
+      status = HttpStatus.CONFLICT;
+      code = 'RESOURCE_IN_USE';
+      message = 'El recurso está en uso y no puede eliminarse.';
     } else {
       this.logger.error(exception, 'Excepción no controlada');
     }
