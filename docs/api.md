@@ -88,7 +88,7 @@ Mensaje genérico en 401 (no distingue "usuario no existe" de "contraseña mala"
 **Sesión:**
 - El access token (JWT, 15 min) va en la respuesta y se envía como `Authorization: Bearer`. El servidor lo valida y además lee el usuario de la BD en cada petición, así que desactivar a alguien o cambiarle el rol tiene efecto inmediato.
 - El refresh token es opaco, viaja solo en la cookie `refresh_token` (`HttpOnly`, `SameSite=Strict`, `Secure` en producción, `Path=/api/v1/auth`) y **se rota** en cada `/auth/refresh`.
-- Reutilizar un refresh token ya rotado devuelve 401 y cierra todas las sesiones del usuario.
+- Reutilizar un refresh token ya rotado devuelve 401 y cierra todas las sesiones del usuario, salvo que se haya rotado hace 10 segundos o menos: esa carrera (recarga rápida, dos pestañas) se tolera y recibe un token nuevo. Un token de una sesión cerrada con logout nunca se tolera.
 - Como la cookie es `SameSite=Strict`, en producción la web y la API deben compartir origen (rewrite `/api/*` de Vercel hacia Render).
 - Correo y contraseña inválidos, o usuario desactivado, dan el mismo 401 `AUTH_INVALID_CREDENTIALS`.
 
@@ -117,13 +117,18 @@ Códigos propios de usuarios: `USER_NOT_FOUND` (404), `USER_EMAIL_TAKEN` (409) y
 
 | Método | Ruta | Descripción | Códigos |
 |---|---|---|---|
-| GET | `/referees` | Lista. Filtros: `categoryId`, `licenseValid=true`, `q` | 200, 403 (R) |
-| POST | `/referees` | Crea perfil para un usuario `REFEREE` | 201, 400, 404, 409, 422 |
-| GET | `/referees/:id` | Detalle (R solo el suyo) | 200, 403, 404 |
-| PATCH | `/referees/:id` | Edita. R no puede cambiar categoría ni licencia ⚠️ | 200, 400, 403, 404, 409 |
-| GET | `/referees/:id/conflicts` | Conflictos de interés | 200 |
-| POST | `/referees/:id/conflicts` | Declara conflicto `{ teamId, reason }` | 201, 409 |
-| DELETE | `/referees/:id/conflicts/:conflictId` | Retira conflicto | 204 |
+| GET | `/referees` | Lista (A, D). Filtros: `categoryId`, `licenseValid=true|false`, `q` (nombre, correo o licencia) | 200, 400, 403 (R) |
+| GET | `/referees/me` | Mi perfil (solo R) | 200, 403, 404 |
+| POST | `/referees` | Crea perfil para un usuario `REFEREE` (A) | 201, 400, 403, 404, 409, 422 |
+| GET | `/referees/:id` | Detalle. Un árbitro solo ve el suyo; el de otro responde 404 | 200, 400, 404 |
+| PATCH | `/referees/:id` | Edita (A todo; R solo `phone`, el resto da 403; D no edita) | 200, 400, 403, 404, 409 |
+| GET | `/referees/:id/conflicts` | Conflictos de interés (A, D; R solo los suyos) | 200, 404 |
+| POST | `/referees/:id/conflicts` | Declara conflicto `{ teamId, reason }` (A, o R sobre sí mismo; `reason` ≥ 10 caracteres) | 201, 400, 403, 404, 409 |
+| DELETE | `/referees/:id/conflicts/:conflictId` | Retira conflicto (A, o R los suyos) ⚠️ | 204, 403, 404 |
+
+La respuesta de un árbitro incluye `category { id, name, level }`, `licenseExpiresOn` (`YYYY-MM-DD`), `licenseStatus` (`VALID`, `EXPIRING` si vence en menos de 30 días, `EXPIRED`) y `licenseDaysRemaining`. Vence el día indicado: ese mismo día aún es `EXPIRING`, no `EXPIRED`. Las fechas se comparan en UTC por ahora; la regla R3 usará la zona horaria de la sede.
+
+Códigos propios: `REFEREE_NOT_FOUND` y `REFEREE_PROFILE_NOT_FOUND` (404), `CATEGORY_NOT_FOUND` (404), `TEAM_NOT_FOUND` (404), `CONFLICT_NOT_FOUND` (404), `USER_NOT_REFEREE` (422), `REFEREE_PROFILE_EXISTS` (409), `LICENSE_NUMBER_TAKEN` (409), `CONFLICT_ALREADY_DECLARED` (409). Un árbitro que pide un perfil o conflicto ajeno recibe 404, no 403.
 
 ```json
 // POST /referees  (A)
@@ -134,9 +139,9 @@ Códigos propios de usuarios: `USER_NOT_FOUND` (404), `USER_EMAIL_TAKEN` (409) y
 
 | Método | Ruta | Códigos |
 |---|---|---|
-| GET | `/categories` | 200 |
-| GET / POST | `/teams` | 200 / 201, 400, 403, 409 |
-| GET / PATCH / DELETE | `/teams/:id` | 200 / 204, 404, 409 (equipo con partidos) |
+| GET | `/categories` | 200 (cualquier usuario autenticado; de menor a mayor nivel) |
+| GET / POST | `/teams` | 200 (cualquier usuario autenticado; filtro `q`) / 201, 400, 403, 409 `TEAM_NAME_TAKEN` (POST solo A) |
+| GET / PATCH / DELETE | `/teams/:id` | 200 / 204, 404 `TEAM_NOT_FOUND`, 409 `RESOURCE_IN_USE` (equipo con conflictos declarados o, más adelante, con partidos). PATCH y DELETE solo A |
 | GET / POST | `/venues` | 200 / 201, 400, 403, 409 |
 | GET / PATCH / DELETE | `/venues/:id` | 200 / 204, 404, 409 |
 

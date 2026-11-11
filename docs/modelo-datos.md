@@ -46,6 +46,7 @@ erDiagram
         text token_hash UK "SHA-256, nunca el token"
         timestamptz expires_at
         timestamptz revoked_at
+        timestamptz rotated_at "solo si se rotó"
         timestamptz created_at
     }
     categories {
@@ -193,9 +194,10 @@ erDiagram
 | token_hash | text | NOT NULL, UNIQUE (SHA-256 del token; el token en claro solo existe en la cookie) |
 | expires_at | timestamptz | NOT NULL, CHECK (expires_at > created_at) |
 | revoked_at | timestamptz | NULL; con valor, el token ya no sirve |
+| rotated_at | timestamptz | NULL; solo se rellena al **rotar** (no al cerrar sesión ni al revocar por robo) |
 | created_at | timestamptz | NOT NULL |
 
-Índice: `(user_id, revoked_at)`. Los tokens se **rotan** en cada uso: el anterior queda revocado y se emite uno nuevo. Si se presenta un token ya revocado se asume robo y se revocan todas las sesiones del usuario. Al desactivar a un usuario también se revocan.
+Índice: `(user_id, revoked_at)`. Los tokens se **rotan** en cada uso: el anterior queda revocado y se emite uno nuevo. Si se presenta un token ya revocado se asume robo y se revocan todas las sesiones del usuario, **salvo** que se haya rotado hace 10 segundos o menos (`rotated_at`): eso es casi seguro una carrera legítima (recarga rápida, dos pestañas, una navegación que perdió la cookie nueva) y se responde con un token nuevo sin cerrar nada. Al desactivar a un usuario también se revocan.
 
 ### categories
 | Columna | Tipo | Restricciones |
@@ -204,24 +206,26 @@ erDiagram
 | name | text | NOT NULL, UNIQUE |
 | level | smallint | NOT NULL, UNIQUE, CHECK (level > 0) |
 
+Son datos de referencia: sus 4 filas (Regional, Nacional, Primera División, Internacional) se insertan en la migración, así existen en todos los ambientes. No están en el seed.
+
 ### referees
 | Columna | Tipo | Restricciones |
 |---|---|---|
 | id | uuid | PK |
 | user_id | uuid | NOT NULL, UNIQUE, FK → users (ON DELETE RESTRICT) |
 | category_id | smallint | NOT NULL, FK → categories |
-| license_number | text | NOT NULL, UNIQUE |
+| license_number | text | NOT NULL, UNIQUE, CHECK (length(trim(license_number)) > 0) |
 | license_expires_on | date | NOT NULL |
 | phone | text | NULL |
 
-Solo un `users.role = REFEREE` puede tener perfil (validado en el servicio).
+Solo un `users.role = REFEREE` puede tener perfil (validado en el servicio). Índice: `(category_id)`. Una licencia sigue vigente todo el día de su vencimiento (R3).
 
 ### teams
 | Columna | Tipo | Restricciones |
 |---|---|---|
 | id | uuid | PK |
-| name | text | NOT NULL, UNIQUE |
-| club | text | NOT NULL |
+| name | text | NOT NULL, UNIQUE, CHECK (length(trim(name)) > 0) |
+| club | text | NOT NULL, CHECK (length(trim(club)) > 0) |
 | city | text | NULL |
 
 ### venues
@@ -263,8 +267,10 @@ Solo un `users.role = REFEREE` puede tener perfil (validado en el servicio).
 | id | uuid | PK |
 | referee_id | uuid | NOT NULL, FK → referees |
 | team_id | uuid | NOT NULL, FK → teams |
-| reason | text | NOT NULL |
+| reason | text | NOT NULL, CHECK (length(trim(reason)) > 0); el servicio exige 10 caracteres como mínimo |
 | | | UNIQUE (referee_id, team_id) |
+
+Índice: `(team_id)`. `referee_id` borra en cascada; `team_id` no (un equipo con conflictos no se puede eliminar).
 
 ### assignments
 | Columna | Tipo | Restricciones |
